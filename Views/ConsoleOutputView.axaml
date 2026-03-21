@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Digrafos.Views.ConsoleOutputView">
+  <Grid RowDefinitions="22, *">
+
+    <!-- Barra superior estilo Unity -->
+    <Border Grid.Row="0" Background="#3C3C3C"
+            BorderBrush="#1A1A1A" BorderThickness="0,1,0,1">
+      <Grid ColumnDefinitions="Auto, *, Auto">
+        <TextBlock Grid.Column="0" Text="Consola"
+                   Classes="UnityLabel"
+                   VerticalAlignment="Center" Margin="8,0,0,0"/>
+        <StackPanel Grid.Column="2" Orientation="Horizontal"
+                    Spacing="6" Margin="0,0,6,0">
+          <TextBlock Text="▶ Output" Classes="UnityLabel"
+                     VerticalAlignment="Center" Opacity="0.5"/>
+          <Border Width="1" Background="#555555" Margin="0,4"/>
+          <TextBlock Text="Errors: 0" Classes="UnityLabel"
+                     Foreground="#888888" VerticalAlignment="Center"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Área de consola -->
+    <Border Grid.Row="1" Background="#1A1A1A"
+            BorderBrush="#111111" BorderThickness="0,0,0,0">
+      <Grid RowDefinitions="*, Auto">
+
+        <ScrollViewer Grid.Row="0"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+          <TextBox x:Name="txtConsoleOutput"
+                   Background="Transparent"
+                   Foreground="#D4D4D4"
+                   BorderThickness="0"
+                   IsReadOnly="True"
+                   TextWrapping="Wrap"
+                   AcceptsReturn="True"
+                   FontFamily="Consolas"
+                   FontSize="12"
+                   Padding="8,6"
+                   Text="Inicializando entorno de digrafos..."/>
+        </ScrollViewer>
+
+        <!-- Barra de estado inferior -->
+        <Border Grid.Row="1" Background="#2D2D2D"
+                BorderBrush="#1A1A1A" BorderThickness="0,1,0,0"
+                Padding="8,3">
+          <Grid ColumnDefinitions="Auto, *, Auto">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
+              <TextBlock x:Name="txtStateIndicator"
+                         Text="● Listo" Classes="UnityLabel"
+                         Foreground="#4EC94E" VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock Grid.Column="2" Text="Ln 1  Col 1"
+                       Classes="UnityLabel" Foreground="#666666"
+                       VerticalAlignment="Center"/>
+          </Grid>
+        </Border>
+
+      </Grid>
+    </Border>
+
+  </Grid>
+</UserControl>

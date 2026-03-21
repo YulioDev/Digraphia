@@ -1,0 +1,30 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:v="clr-namespace:Digrafos.Views"
+        x:Class="Digrafos.MainWindow"
+        Title="Digrafos"
+        Width="800" Height="600"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
+        TransparencyLevelHint="Mica"
+        Background="#19191b"
+        SystemDecorations="None">
+    
+    <Grid RowDefinitions="40, *, 5, 150">
+        
+        <v:TitleBarView Grid.Row="0" />
+
+        <Grid Grid.Row="1" ColumnDefinitions="250, 5, *"
+            Background="Transparent">
+            <v:ConfigurationView Grid.Column="0" />
+            <GridSplitter Grid.Column="1" Background="Transparent" ResizeDirection="Columns"/>
+            <v:DrawingAreaView Grid.Column="2" />
+        </Grid>
+
+        <GridSplitter Grid.Row="2" Background="Transparent" ResizeDirection="Rows"/>
+
+        <v:ConsoleOutputView Grid.Row="3" />
+
+    </Grid>
+</Window>

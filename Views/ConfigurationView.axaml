@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Digrafos.Views.ConfigurationView">
+  <Border Background="#282828" BorderBrush="#1A1A1A" BorderThickness="0,0,1,0">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+      <StackPanel x:Name="pnlConfiguration" Margin="10" Spacing="15">
+
+        <TextBlock Text="Panel de Configuración" Classes="UnityHeader" FontSize="14"/>
+        <Border Classes="UnityDivider"/>
+
+        <!-- Herramientas -->
+        <Border Classes="UnityContentBox">
+          <StackPanel Spacing="8">
+            <TextBlock Text="HERRAMIENTAS" Classes="UnityLabel"/>
+            <TextBlock Text="Selecciona una acción para interactuar con el lienzo." Classes="UnitySubText"/>
+            <Button x:Name="btnAddNode" Classes="UnityButton" Content="Añadir Nodo"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+            <Button x:Name="btnRemoveNode" Classes="UnityButtonDanger" Content="Quitar Nodo"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="UnityDivider"/>
+
+        <!-- Configuración de búsqueda -->
+        <Border Classes="UnityContentBox">
+          <StackPanel Spacing="8">
+            <TextBlock Text="BÚSQUEDA" Classes="UnityLabel"/>
+
+            <TextBlock Text="Algoritmo" Classes="UnitySubText"/>
+            <ComboBox x:Name="cmbAlgorithm" Classes="UnityComboBox"
+                      HorizontalAlignment="Stretch">
+              <ComboBoxItem Content="Depth First"/>
+            </ComboBox>
+
+            <TextBlock Text="Velocidad de reproducción" Classes="UnitySubText"/>
+            <Grid ColumnDefinitions="*, Auto">
+              <Slider x:Name="sldSpeed" Grid.Column="0"
+                      Classes="UnitySlider"
+                      Minimum="0.1" Maximum="1.0" Value="0.5"
+                      TickFrequency="0.1" IsSnapToTickEnabled="True"/>
+              <TextBlock x:Name="txtSpeedValue" Grid.Column="1"
+                         Text="50%" Classes="UnityLabel"
+                         VerticalAlignment="Center" Margin="6,0,0,0" Width="35"/>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="UnityDivider"/>
+
+        <!-- Control de ejecución -->
+        <Border Classes="UnityContentBox">
+          <StackPanel Spacing="8">
+            <TextBlock Text="EJECUCIÓN" Classes="UnityLabel"/>
+            <Button x:Name="btnStartSearch" Classes="UnityButtonPrimary" Content="▶  Iniciar Búsqueda"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+            <Button x:Name="btnStopSearch" Classes="UnityButtonDanger" Content="■  Detener Búsqueda"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+          </StackPanel>
+        </Border>
+
+      </StackPanel>
+    </ScrollViewer>
+  </Border>
+</UserControl>
