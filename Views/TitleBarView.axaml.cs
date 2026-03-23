@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 
-namespace Digrafos.Views;
+namespace Digraphia.Views;
 
 public partial class TitleBarView : UserControl
 {

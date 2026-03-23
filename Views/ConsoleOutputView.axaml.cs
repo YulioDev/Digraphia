@@ -1,8 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Threading;
-using Digrafos.Services;
+using Digraphia.Services;
 
-namespace Digrafos.Views;
+namespace Digraphia.Views;
 
 public partial class ConsoleOutputView : UserControl
 {

@@ -1,10 +1,10 @@
 /* Archivo: Views/ConfigurationView.axaml.cs */
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
-using Digrafos.EventManager;
-using Digrafos.Services;
+using Digraphia.EventManager;
+using Digraphia.Services;
 
-namespace Digrafos.Views;
+namespace Digraphia.Views;
 
 public partial class ConfigurationView : UserControl
 {

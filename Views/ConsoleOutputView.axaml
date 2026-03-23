@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="Digrafos.Views.ConsoleOutputView">
+             x:Class="Digraphia.Views.ConsoleOutputView">
   <Grid RowDefinitions="22, *">
 
     <!-- Barra superior estilo Unity -->

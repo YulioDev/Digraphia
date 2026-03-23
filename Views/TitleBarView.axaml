@@ -1,10 +1,10 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="Digrafos.Views.TitleBarView">
+             x:Class="Digraphia.Views.TitleBarView">
   <Grid Background="#2D2D30" ColumnDefinitions="Auto, *, Auto">
 
     <TextBlock Grid.Column="0"
-               Text="Editor de Digrafos"
+               Text="Editor de Digraphia"
                Classes="UnityHeader"
                VerticalAlignment="Center"
                Margin="10,0,0,0"/>

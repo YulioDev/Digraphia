@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="Digrafos.Views.ConfigurationView">
+             x:Class="Digraphia.Views.ConfigurationView">
   <Border Background="#282828" BorderBrush="#1A1A1A" BorderThickness="0,0,1,0">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
       <StackPanel x:Name="pnlConfiguration" Margin="10" Spacing="15">

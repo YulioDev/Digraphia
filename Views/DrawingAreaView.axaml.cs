@@ -3,9 +3,9 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
-using Digrafos.EventManager;
+using Digraphia.EventManager;
 
-namespace Digrafos.Views;
+namespace Digraphia.Views;
 
 public partial class DrawingAreaView : UserControl
 {

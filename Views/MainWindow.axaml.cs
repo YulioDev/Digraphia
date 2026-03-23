@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace Digrafos;
+namespace Digraphia;
 
 public partial class MainWindow : Window
 {

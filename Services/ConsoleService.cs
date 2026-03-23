@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Digrafos.Services;
+namespace Digraphia.Services;
 
 public enum ConsoleState
 {

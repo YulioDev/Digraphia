@@ -8,7 +8,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 
 
-namespace Digrafos.Views;
+namespace Digraphia.Views;
 
 public class NodeSpawner
 {

@@ -3,7 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 
-namespace Digrafos.Views;
+namespace Digraphia.Views;
 
 public class GridBackgroundControl : Control
 {

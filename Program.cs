@@ -1,7 +1,7 @@
 ﻿using Avalonia;
 using System;
 
-namespace Digrafos;
+namespace Digraphia;
 
 class Program
 {

@@ -1,6 +1,6 @@
 using System;
 
-namespace Digrafos.EventManager;
+namespace Digraphia.EventManager;
 
 public static class MainEventManager
 {

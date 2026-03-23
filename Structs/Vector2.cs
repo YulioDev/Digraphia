@@ -1,6 +1,6 @@
 using Avalonia;
 
-namespace Digrafos;
+namespace Digraphia;
 
 public struct Vector2
 {

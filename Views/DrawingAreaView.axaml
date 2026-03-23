@@ -1,7 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:v="clr-namespace:Digrafos.Views"
-             x:Class="Digrafos.Views.DrawingAreaView">
+             xmlns:v="clr-namespace:Digraphia.Views"
+             x:Class="Digraphia.Views.DrawingAreaView">
   <Grid RowDefinitions="22, *">
 
     <Border Grid.Row="0" Background="#3C3C3C"

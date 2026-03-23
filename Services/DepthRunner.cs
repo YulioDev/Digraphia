@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Digrafos.Views;
+using Digraphia.Views;
 
-namespace Digrafos
+namespace Digraphia
 {
     public class GraphRunner
     {
