@@ -23,6 +23,9 @@ public class NodeView : UserControl
     public bool IsAvailableSlot { get; private set; }
     public NodeView? ParentNode { get; set; }
 
+    // Nueva propiedad: lista de nodos hijos (adyacentes en el grafo)
+    public List<NodeView> Children { get; } = new List<NodeView>();
+
     public NodeView(string content = "", bool isAvailableSlot = false)
     {
         IsAvailableSlot = isAvailableSlot;
@@ -38,7 +41,7 @@ public class NodeView : UserControl
 
         if (IsAvailableSlot)
         {
-            _circle.Fill = new SolidColorBrush(Color.Parse("#80FFA500")); 
+            _circle.Fill = new SolidColorBrush(Color.Parse("#80FFA500"));
             _circle.Stroke = new SolidColorBrush(Color.Parse("#FFA500"));
         }
         else
@@ -54,7 +57,7 @@ public class NodeView : UserControl
             FontSize = 11,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-            TextAlignment = Avalonia.Media.TextAlignment.Center
+            TextAlignment = TextAlignment.Center
         };
 
         var grid = new Grid();
@@ -72,15 +75,17 @@ public class NodeView : UserControl
         _circle.Fill = new SolidColorBrush(Color.Parse("#3C3C3C"));
         _circle.Stroke = new SolidColorBrush(Color.Parse("#4D78A8"));
     }
+
+    // Nuevo método: cambiar colores de relleno y borde
+    public void ChangeColor(string fillHex, string strokeHex)
+    {
+        _circle.Fill = new SolidColorBrush(Color.Parse(fillHex));
+        _circle.Stroke = new SolidColorBrush(Color.Parse(strokeHex));
+    }
 }
 
 public static class ConnectionBuilder
 {
-    /* Calcula la trigonometria exacta entre el centro de dos controles para trazar una linea 
-    que conecte sus bordes sin atravesar el area de los nodos. Ademas, agrega un poligono 
-    al final de la linea para representar visualmente la direccion de la relacion jerarquica.
-    Al usar ZIndex negativo garantizamos que las lineas se dibujen siempre detras de los nodos.
-    */
     public static void DrawDirectedConnection(Canvas canvas, Control parent, Control child)
     {
         double radius = parent.Width / 2;
