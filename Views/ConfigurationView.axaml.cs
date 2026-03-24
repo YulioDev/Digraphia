@@ -24,7 +24,7 @@ public partial class ConfigurationView : UserControl
 
         sldSpeed.PropertyChanged += (_, e) =>
         {
-            if (e.Property == RangeBase.ValueProperty) txtSpeedValue.Text = $"{(int)(sldSpeed.Value * 100)}%";
+            if (e.Property == RangeBase.ValueProperty) { txtSpeedValue.Text = $"{(int)(sldSpeed.Value * 100)}%"; }
         };
     }
 
@@ -84,8 +84,7 @@ public partial class ConfigurationView : UserControl
     private void OnStartSearch()
     {
         float speed = (float)sldSpeed.Value;
-        Globals.Instance.StopAtGoal = true;
-        ConsoleService.Output($"Iniciando búsqueda con speed={speed}");
+        ConsoleService.Output($"Iniciando búsqueda desde UI con speed={speed}");
         MainEventManager.StartSearch(speed);
     }
 }

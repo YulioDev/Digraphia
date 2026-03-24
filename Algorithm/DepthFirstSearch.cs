@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Buffers;
 using Avalonia.Threading;
 using Digraphia;
 using Digraphia.Services;
@@ -28,14 +30,12 @@ public class DepthFirstSearch : IGraphAlgorithm<Node>
         _finished = false;
     }
 
-    // Método expuesto para que el Runner sepa dónde está el foco visual.
     public Node? GetCurrentNode() => _current;
 
     public bool Step()
     {
-        if (_finished) return false;
+        if (_finished) { return false; }
 
-        // Si la pila está vacía, marcamos el último nodo y cerramos la ejecución.
         if (_stack.Count == 0)
         {
             _finished = true;
@@ -49,7 +49,6 @@ public class DepthFirstSearch : IGraphAlgorithm<Node>
 
         var nextNode = _stack.Pop();
 
-        // Limpieza visual: El nodo que acabamos de dejar pasa a estar completado.
         if (_current != null && _current != nextNode)
         {
             var prev = _current;
@@ -58,7 +57,6 @@ public class DepthFirstSearch : IGraphAlgorithm<Node>
 
         _current = nextNode;
 
-        // Si ya lo visitamos, omitimos recursivamente sin romper el ciclo del Runner.
         if (_visited.Contains(_current))
         {
             ConsoleService.Output($"Omitiendo nodo ya visitado {_current.Id}");
@@ -68,14 +66,24 @@ public class DepthFirstSearch : IGraphAlgorithm<Node>
         _visited.Add(_current);
         Dispatcher.UIThread.Post(() => _current.State = NodeState.Highlight);
 
-        // Agregamos en reversa para mantener el orden de visita visual natural de izquierda a derecha.
-        for (int i = _current.Children.Count - 1; i >= 0; i--)
+        int childCount = _current.Children.Count;
+        if (childCount > 0)
         {
-            var child = _current.Children[i];
-            if (!_visited.Contains(child)) _stack.Push(child);
+            // Conecta con System.Buffers. Rol: Evita saturar el GC pidiendo memoria prestada en lugar de crear listas nuevas por cada salto de nodo.
+            var temp = ArrayPool<Node>.Shared.Rent(childCount);
+            for (int i = 0; i < childCount; i++) { temp[i] = _current.Children[i]; }
+
+            // Conecta con GridPosition. Rol: Ordena los hijos basándose en su coordenada X (Derecha a Izquierda). Al apilarse, el de menor X (Izquierda) quedará en la cima y será el próximo en ejecutarse.
+            Array.Sort(temp, 0, childCount, Comparer<Node>.Create((a, b) => b.GridPosition.X.CompareTo(a.GridPosition.X)));
+
+            for (int i = 0; i < childCount; i++)
+            {
+                if (!_visited.Contains(temp[i])) { _stack.Push(temp[i]); }
+            }
+
+            ArrayPool<Node>.Shared.Return(temp, clearArray: true);
         }
 
-        // Siempre retornamos true si procesamos un nodo, indicando al Runner que aplique el Delay.
         return true;
     }
 }
