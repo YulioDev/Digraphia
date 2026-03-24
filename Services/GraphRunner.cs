@@ -1,4 +1,5 @@
-﻿using Avalonia.Threading;
+﻿// GraphRunner.cs
+using Avalonia.Threading;
 using Digraphia.Algorithms;
 using Digraphia.Services;
 using System;
@@ -13,6 +14,7 @@ public class GraphRunner
     private bool _isRunning;
 
     public event Action<Node>? NodeVisited;
+    public event Action<Node>? GoalReached;   // Nuevo evento
 
     public GraphRunner(IGraphAlgorithm<Node> algorithm)
     {
@@ -50,6 +52,9 @@ public class GraphRunner
                         ConsoleService.State("Meta alcanzada", ConsoleState.Ready);
 
                         Dispatcher.UIThread.Post(() => newCurrent.State = NodeState.Selected);
+
+                        // Notificar que se alcanzó la meta para dibujar la ruta
+                        GoalReached?.Invoke(newCurrent);
 
                         // Backtracking: Recorre y colorea de azul la ruta conectada hasta el nodo raíz
                         var pathNode = newCurrent.Parent;

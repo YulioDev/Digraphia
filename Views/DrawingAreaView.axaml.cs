@@ -1,11 +1,15 @@
+// DrawingAreaView.axaml.cs
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Digraphia.Algorithms;
 using Digraphia.EventManager;
 using Digraphia.Services;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace Digraphia.Views;
@@ -20,6 +24,7 @@ public partial class DrawingAreaView : UserControl
     private NodeSpawner? _spawner;
     private GraphRunner? _currentRunner;
     private CancellationTokenSource? _currentCts;
+    private Polyline? _pathPolyline;
 
     public DrawingAreaView()
     {
@@ -47,6 +52,11 @@ public partial class DrawingAreaView : UserControl
     {
         if (_spawner == null) return;
 
+        ClearPath();
+
+        if (_currentRunner != null)
+            _currentRunner.GoalReached -= OnGoalReached;
+
         OnSearchStopped();
 
         var root = _spawner.RootNode;
@@ -56,7 +66,6 @@ public partial class DrawingAreaView : UserControl
             return;
         }
 
-        // Limpia el estado visual pero respeta el estado de la meta elegida.
         var nodes = _spawner.AllNodes;
         for (int i = 0; i < nodes.Count; i++)
         {
@@ -68,6 +77,8 @@ public partial class DrawingAreaView : UserControl
         var algorithm = new DepthFirstSearch();
         _currentRunner = new GraphRunner(algorithm);
         _currentCts = new CancellationTokenSource();
+
+        _currentRunner.GoalReached += OnGoalReached;
 
         float safeSpeed = speed <= 0.05f ? 0.05f : speed;
 
@@ -81,6 +92,8 @@ public partial class DrawingAreaView : UserControl
         }
         finally
         {
+            if (_currentRunner != null)
+                _currentRunner.GoalReached -= OnGoalReached;
             _currentRunner = null;
             _currentCts?.Dispose();
             _currentCts = null;
@@ -151,5 +164,84 @@ public partial class DrawingAreaView : UserControl
         _isPanning = false;
         e.Pointer.Capture(null);
         e.Handled = true;
+    }
+
+    private void ClearPath()
+    {
+        if (_pathPolyline != null && _canvasDrawingArea != null)
+        {
+            _canvasDrawingArea.Children.Remove(_pathPolyline);
+            _pathPolyline = null;
+        }
+    }
+
+    private void DrawPath(Node goalNode)
+    {
+        if (_canvasDrawingArea == null || _spawner == null) return;
+
+        var path = BuildPathFromGoal(goalNode);
+        if (path.Count < 2) return;
+
+        var points = GetCanvasPoints(path);
+        var polyline = new Polyline
+        {
+            Points = points,
+            Stroke = Brushes.Red,
+            StrokeThickness = 5,
+            ZIndex = 1000
+        };
+
+        ClearPath();
+        _canvasDrawingArea.Children.Add(polyline);
+        _pathPolyline = polyline;
+
+        LogPathToConsole(path);
+    }
+
+    private List<Node> BuildPathFromGoal(Node goalNode)
+    {
+        var path = new List<Node>();
+        var current = goalNode;
+        while (current != null)
+        {
+            path.Add(current);
+            current = current.Parent;
+        }
+        path.Reverse();
+        return path;
+    }
+
+    private Points GetCanvasPoints(List<Node> path)
+    {
+        var points = new Points();
+        foreach (var node in path)
+        {
+            var view = _spawner!.GetViewForNode(node);
+            if (view != null)
+            {
+                double centerX = Canvas.GetLeft(view) + view.Width / 2;
+                double centerY = Canvas.GetTop(view) + view.Height / 2;
+                points.Add(new Point(centerX, centerY));
+            }
+        }
+        return points;
+    }
+
+    private void LogPathToConsole(List<Node> path)
+    {
+        var nodeIds = new List<string>();
+        foreach (var node in path)
+        {
+            nodeIds.Add(node.Id);
+        }
+        ConsoleService.Output($"Ruta encontrada: {string.Join(" -> ", nodeIds)}");
+    }
+
+    private void OnGoalReached(Node goalNode)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            DrawPath(goalNode);
+        });
     }
 }
