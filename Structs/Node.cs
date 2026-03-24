@@ -10,16 +10,19 @@ public enum NodeState
     Normal,
     Highlight,
     Completed,
-    Selected
+    Selected,
+    Path,
+    Goal
 }
 
 public class Node : INotifyPropertyChanged
 {
-    private string _id = null!;  // inicializado en constructor
+    private string _id = null!;
     private Vector2 _gridPosition;
     private Node? _parent;
     private List<Node> _children = new();
     private NodeState _state = NodeState.Normal;
+    private bool _isGoal;
 
     public string Id
     {
@@ -51,6 +54,19 @@ public class Node : INotifyPropertyChanged
         set => SetField(ref _state, value);
     }
 
+    public bool IsGoal
+    {
+        get => _isGoal;
+        set
+        {
+            if (SetField(ref _isGoal, value))
+            {
+                if (_isGoal) State = NodeState.Goal;
+                else if (State == NodeState.Goal) State = NodeState.Normal;
+            }
+        }
+    }
+
     public Node(string id, Vector2 gridPosition)
     {
         Id = id;
@@ -70,14 +86,5 @@ public class Node : INotifyPropertyChanged
         field = value;
         OnPropertyChanged(propertyName);
         return true;
-    }
-
-    // Dentro de la clase Node, agregar:
-private bool _isGoal;
-
-    public bool IsGoal
-    {
-        get => _isGoal;
-        set => SetField(ref _isGoal, value);
     }
 }

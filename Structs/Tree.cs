@@ -9,7 +9,6 @@ public class Tree
     public List<Node> AllNodes { get; private set; }
     public List<Node> PendingDeletion { get; private set; }
 
-    // Constructor sin parámetros que inicializa las listas
     public Tree()
     {
         AllNodes = new List<Node>();

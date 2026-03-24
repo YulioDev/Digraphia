@@ -1,4 +1,3 @@
-/* Archivo: Views/ConfigurationView.axaml.cs */
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Digraphia.EventManager;
@@ -9,6 +8,8 @@ namespace Digraphia.Views;
 public partial class ConfigurationView : UserControl
 {
     private bool _isAddingNodes = false;
+    private bool _isRemovingNodes = false;
+    private bool _isMarkingGoal = false;
 
     public ConfigurationView()
     {
@@ -16,63 +17,75 @@ public partial class ConfigurationView : UserControl
 
         btnAddNode.Click += (_, _) => ToggleAddNodeMode();
         btnRemoveNode.Click += (_, _) => ToggleRemoveNodeMode();
+        btnMarkGoal.Click += (_, _) => ToggleGoalMode();
 
         btnStartSearch.Click += (_, _) => OnStartSearch();
-        btnStopSearch.Click += (_, _) => OnStopSearch();
+        btnStopSearch.Click += (_, _) => MainEventManager.StopSearch();
 
         sldSpeed.PropertyChanged += (_, e) =>
         {
-            if (e.Property == RangeBase.ValueProperty)
-                txtSpeedValue.Text = $"{(int)(sldSpeed.Value * 100)}%";
+            if (e.Property == RangeBase.ValueProperty) txtSpeedValue.Text = $"{(int)(sldSpeed.Value * 100)}%";
         };
+    }
+
+    private void ClearAllModes()
+    {
+        _isAddingNodes = false;
+        _isRemovingNodes = false;
+        _isMarkingGoal = false;
+
+        btnAddNode.Classes.Remove("UnityButtonPrimary");
+        btnRemoveNode.Classes.Remove("UnityButtonPrimary");
+        btnMarkGoal.Classes.Remove("UnityButtonPrimary");
     }
 
     private void ToggleAddNodeMode()
     {
-        if (_isAddingNodes)
+        bool wasActive = _isAddingNodes;
+        ClearAllModes();
+
+        if (!wasActive)
         {
-            // Desactivar modo añadir
-            _isAddingNodes = false;
-            btnAddNode.Content = "Añadir Nodo";
-            btnAddNode.Classes.Remove("UnityButtonPrimary");
-            MainEventManager.SetMode(EditorMode.NoAction);
-        }
-        else
-        {
-            // Activar modo añadir, desactivar modo eliminar si estaba activo
             _isAddingNodes = true;
-            btnAddNode.Content = "Terminar Añadir Nodo";
             btnAddNode.Classes.Add("UnityButtonPrimary");
-            // Desmarcar botón de eliminar
-            btnRemoveNode.Classes.Remove("UnityButtonPrimary");
             MainEventManager.SetMode(EditorMode.BuildNode);
         }
+        else { MainEventManager.SetMode(EditorMode.NoAction); }
     }
 
     private void ToggleRemoveNodeMode()
     {
-        // Alternar modo eliminar, desactivando modo añadir si estaba activo
-        if (_isAddingNodes)
+        bool wasActive = _isRemovingNodes;
+        ClearAllModes();
+
+        if (!wasActive)
         {
-            // Desactivar modo añadir primero
-            _isAddingNodes = false;
-            btnAddNode.Content = "Añadir Nodo";
-            btnAddNode.Classes.Remove("UnityButtonPrimary");
+            _isRemovingNodes = true;
+            btnRemoveNode.Classes.Add("UnityButtonPrimary");
+            MainEventManager.SetMode(EditorMode.RemoveNode);
         }
-        // Activar modo eliminar (no es toggle, se activa y se desactiva al salir)
-        btnRemoveNode.Classes.Add("UnityButtonPrimary");
-        MainEventManager.SetMode(EditorMode.RemoveNode);
+        else { MainEventManager.SetMode(EditorMode.NoAction); }
     }
 
-    // En OnStartSearch() y OnStopSearch():
+    private void ToggleGoalMode()
+    {
+        bool wasActive = _isMarkingGoal;
+        ClearAllModes();
+
+        if (!wasActive)
+        {
+            _isMarkingGoal = true;
+            btnMarkGoal.Classes.Add("UnityButtonPrimary");
+            MainEventManager.SetMode(EditorMode.GoalMode);
+        }
+        else { MainEventManager.SetMode(EditorMode.NoAction); }
+    }
+
     private void OnStartSearch()
     {
         float speed = (float)sldSpeed.Value;
+        Globals.Instance.StopAtGoal = true;
+        ConsoleService.Output($"Iniciando búsqueda con speed={speed}");
         MainEventManager.StartSearch(speed);
-    }
-
-    private void OnStopSearch()
-    {
-        MainEventManager.StopSearch();
     }
 }

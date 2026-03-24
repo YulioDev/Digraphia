@@ -1,11 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Threading;
+using Digraphia.Services;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Digraphia.Views;
 
@@ -16,8 +18,8 @@ public class NodeSpawner
     private Tree _tree = new();
     private readonly Dictionary<Node, NodeView> _nodeToView = new();
 
-    private bool _isBuildModeActive;
-    private bool _isRemoveModeActive;
+    private Node? _lastSelectedNode;
+    private int _nodeCounter = 0;
 
     public Node? RootNode => _tree.Root;
     public IReadOnlyList<Node> AllNodes => _tree.AllNodes;
@@ -26,121 +28,162 @@ public class NodeSpawner
     {
         _canvas = canvas;
         _grid = grid;
-        _tree = new Tree();  // Inicialización explícita
-    }
+        _tree = new Tree();
 
-    public void EnableBuildMode()
-    {
-        _isBuildModeActive = true;
-        _isRemoveModeActive = false;
         _canvas.PointerPressed += OnCanvasClicked;
     }
 
-    public void EnableRemoveMode()
+    // Genera identificadores visuales secuenciales (A, B, C... Z, AA, AB...)
+    private string GenerateNodeName()
     {
-        _isRemoveModeActive = true;
-        _isBuildModeActive = false;
-        _canvas.PointerPressed += OnCanvasClicked;
+        int value = _nodeCounter++;
+        string name = string.Empty;
+        do
+        {
+            name = (char)('A' + (value % 26)) + name;
+            value = (value / 26) - 1;
+        } while (value >= 0);
+        return name;
     }
 
-    public void DisableAllModes()
+    // Optimización GC: Uso de loop for nativo y cálculo de distancia al cuadrado 
+    // para evitar asignaciones de memoria y el uso pesado de Math.Sqrt
+    private Node? FindClosestNode(Vector2 position)
     {
-        _isBuildModeActive = false;
-        _isRemoveModeActive = false;
-        _canvas.PointerPressed -= OnCanvasClicked;
+        var nodes = _tree.AllNodes;
+        if (nodes.Count == 0) return null;
+
+        Node? closest = null;
+        float minDistance = float.MaxValue;
+
+        for (int i = 0; i < nodes.Count; i++)
+        {
+            float dist = nodes[i].GridPosition.DistanceSquaredTo(position);
+            if (dist < minDistance)
+            {
+                minDistance = dist;
+                closest = nodes[i];
+            }
+        }
+
+        return closest;
     }
 
     private void OnCanvasClicked(object? sender, PointerPressedEventArgs e)
     {
-        if (!e.GetCurrentPoint(_canvas).Properties.IsLeftButtonPressed)
-            return;
+        if (!e.GetCurrentPoint(_canvas).Properties.IsLeftButtonPressed) return;
 
+        var mode = Globals.Instance.CurrentMode;
         var clickPos = e.GetPosition(_canvas);
+        var clickedNode = GetNodeAtPosition(clickPos);
 
-        if (_isBuildModeActive)
+        switch (mode)
         {
-            var gridPos = PixelToGrid(clickPos);
-            gridPos = new Vector2((float)Math.Round(gridPos.X), (float)Math.Round(gridPos.Y));
-
-            if (IsNodeAtPosition(gridPos))
-                return;
-
-            var newNode = CreateNode(gridPos);
-            if (newNode != null)
-            {
-                var nearest = _tree.FindNearestNode(gridPos);
-                if (nearest != null && nearest != newNode)
-                {
-                    nearest.Children.Add(newNode);
-                    newNode.Parent = nearest;
-                }
-                else if (_tree.AllNodes.Count == 0)
-                {
-                    // primer nodo, será raíz
-                }
-
-                _tree.AddNode(newNode);
-                _grid.AddPoint(gridPos, Colors.Transparent);
-                RefreshConnections();
-            }
-        }
-        else if (_isRemoveModeActive)
-        {
-            var node = FindNodeAtPosition(clickPos);
-            if (node != null)
-            {
-                RemoveNode(node);
-                RefreshConnections();
-            }
+            case EditorMode.BuildNode:
+                HandleBuildMode(clickPos, clickedNode);
+                break;
+            case EditorMode.RemoveNode:
+                if (clickedNode != null) HandleRemoveMode(clickedNode);
+                break;
+            case EditorMode.GoalMode:
+                if (clickedNode != null) HandleGoalMode(clickedNode);
+                break;
         }
     }
 
-    private Node? CreateNode(Vector2 gridPos)
+    private void HandleBuildMode(Point clickPos, Node? clickedNode)
     {
-        var pixelPos = _grid.GridToCanvas(gridPos);
-        string nodeId = ((char)('A' + _tree.AllNodes.Count)).ToString();
-        var node = new Node(nodeId, gridPos);
-
-        // Crear vista y enlazar
-        var view = new NodeView
+        if (clickedNode == null)
         {
-            DataContext = node,
-            Width = 40,
-            Height = 40
-        };
-        Canvas.SetLeft(view, pixelPos.X - view.Width / 2);
-        Canvas.SetTop(view, pixelPos.Y - view.Height / 2);
-        _canvas.Children.Add(view);
+            var snappedPos = SnapToGrid(clickPos);
+            var gridVec = new Vector2((float)snappedPos.X, (float)snappedPos.Y);
 
-        _nodeToView[node] = view;
-        return node;
+            var closestNode = FindClosestNode(gridVec);
+            var newNode = new Node(GenerateNodeName(), gridVec);
+
+            _tree.AddNode(newNode);
+
+            // Conexión automática al nodo más cercano al momento de crearlo
+            if (closestNode != null)
+            {
+                closestNode.Children.Add(newNode);
+                newNode.Parent = closestNode;
+                ConsoleService.Output($"Autoconectado: {closestNode.Id} -> {newNode.Id}");
+            }
+
+            var nodeView = new NodeView { DataContext = newNode };
+            Canvas.SetLeft(nodeView, snappedPos.X - 25);
+            Canvas.SetTop(nodeView, snappedPos.Y - 25);
+
+            _nodeToView[newNode] = nodeView;
+            _canvas.Children.Add(nodeView);
+
+            RefreshConnections();
+            _lastSelectedNode = null;
+        }
+        else
+        {
+            // Permite al usuario forzar conexiones manuales adicionales haciendo clic en dos nodos
+            if (_lastSelectedNode == null)
+            {
+                _lastSelectedNode = clickedNode;
+                ConsoleService.Output($"Nodo {clickedNode.Id} seleccionado. Clic en otro para conectar.");
+            }
+            else if (_lastSelectedNode != clickedNode)
+            {
+                if (!_lastSelectedNode.Children.Contains(clickedNode))
+                {
+                    _lastSelectedNode.Children.Add(clickedNode);
+                    clickedNode.Parent = _lastSelectedNode;
+                    RefreshConnections();
+                    ConsoleService.Output($"Conectado: {_lastSelectedNode.Id} -> {clickedNode.Id}");
+                }
+                _lastSelectedNode = null;
+            }
+        }
     }
 
-    private bool IsNodeAtPosition(Vector2 gridPos)
+    private void HandleRemoveMode(Node clickedNode)
     {
-        // Asegurar que ningún nodo tenga posición nula
-        return _tree.AllNodes.Any(n => n.GridPosition.DistanceTo(gridPos) < 0.1f);
+        RemoveNode(clickedNode);
+        RefreshConnections();
+        ConsoleService.Output($"Nodo {clickedNode.Id} eliminado.");
     }
 
-    private Node? FindNodeAtPosition(Avalonia.Point clickPos)
+    private void HandleGoalMode(Node clickedNode)
     {
-        // Buscar primero por colisión en la vista
-        var view = _canvas.Children.OfType<NodeView>().FirstOrDefault(v =>
+        var nodes = _tree.AllNodes;
+        for (int i = 0; i < nodes.Count; i++) nodes[i].IsGoal = false;
+
+        clickedNode.IsGoal = true;
+        ConsoleService.Output($"Nodo {clickedNode.Id} marcado como Meta.");
+    }
+
+    private Vector2 SnapToGrid(Point p)
+    {
+        float size = _grid.GridCellSize;
+        float x = (float)(Math.Round(p.X / size) * size);
+        float y = (float)(Math.Round(p.Y / size) * size);
+        return new Vector2(x, y);
+    }
+
+    private Node? GetNodeAtPosition(Point clickPos)
+    {
+        var view = _nodeToView.Values.FirstOrDefault(v =>
         {
             var left = Canvas.GetLeft(v);
             var top = Canvas.GetTop(v);
             var rect = new Rect(left, top, v.Width, v.Height);
             return rect.Contains(clickPos);
         });
-        if (view != null)
-            return view.DataContext as Node;
-        return null;
+        return view?.DataContext as Node;
     }
-    // Agregar dentro de la clase NodeSpawner:
+
     public NodeView? GetViewForNode(Node node)
     {
         return _nodeToView.TryGetValue(node, out var view) ? view : null;
     }
+
     private void RemoveNode(Node node)
     {
         _tree.RemoveNode(node);
@@ -156,13 +199,19 @@ public class NodeSpawner
         var toRemove = new List<Control>();
         toRemove.AddRange(_canvas.Children.OfType<Line>());
         toRemove.AddRange(_canvas.Children.OfType<Polygon>());
-        foreach (var element in toRemove)
-            _canvas.Children.Remove(element);
 
-        foreach (var node in _tree.AllNodes)
+        int removeCount = toRemove.Count;
+        for (int i = 0; i < removeCount; i++) _canvas.Children.Remove(toRemove[i]);
+
+        var nodes = _tree.AllNodes;
+        for (int i = 0; i < nodes.Count; i++)
         {
-            foreach (var child in node.Children)
+            var node = nodes[i];
+            int childCount = node.Children.Count;
+
+            for (int j = 0; j < childCount; j++)
             {
+                var child = node.Children[j];
                 if (_nodeToView.TryGetValue(node, out var parentView) &&
                     _nodeToView.TryGetValue(child, out var childView))
                 {
@@ -171,8 +220,4 @@ public class NodeSpawner
             }
         }
     }
-
-    private Vector2 PixelToGrid(Avalonia.Point pixel) =>
-        new((float)(pixel.X / _grid.GridCellSize),
-            (float)(pixel.Y / _grid.GridCellSize));
 }

@@ -6,8 +6,7 @@ public static class MainEventManager
 {
     public static event Action<EditorMode>? ModeChanged;
 
-    // Nuevos eventos
-    public static event Action<float>? SearchStarted; // float speed
+    public static event Action<float>? SearchStarted;
     public static event Action? SearchStopped;
 
     public static void SetMode(EditorMode mode)

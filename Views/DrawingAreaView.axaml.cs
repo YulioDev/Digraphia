@@ -20,6 +20,7 @@ public partial class DrawingAreaView : UserControl
     private NodeSpawner? _spawner;
     private GraphRunner? _currentRunner;
     private CancellationTokenSource? _currentCts;
+
     public DrawingAreaView()
     {
         InitializeComponent();
@@ -40,15 +41,12 @@ public partial class DrawingAreaView : UserControl
 
         MainEventManager.SearchStarted += OnSearchStarted;
         MainEventManager.SearchStopped += OnSearchStopped;
-
-        MainEventManager.ModeChanged += OnModeChanged;
     }
 
     private async void OnSearchStarted(float speed)
     {
         if (_spawner == null) return;
 
-        // Detener búsqueda anterior si existe
         OnSearchStopped();
 
         var root = _spawner.RootNode;
@@ -58,23 +56,28 @@ public partial class DrawingAreaView : UserControl
             return;
         }
 
-        // Resetear colores de todos los nodos
-        foreach (var node in _spawner.AllNodes)
+        // Limpia el estado visual pero respeta el estado de la meta elegida.
+        var nodes = _spawner.AllNodes;
+        for (int i = 0; i < nodes.Count; i++)
         {
-            node.State = NodeState.Normal;
+            var node = nodes[i];
+            if (node.IsGoal) node.State = NodeState.Goal;
+            else node.State = NodeState.Normal;
         }
 
         var algorithm = new DepthFirstSearch();
         _currentRunner = new GraphRunner(algorithm);
         _currentCts = new CancellationTokenSource();
 
+        float safeSpeed = speed <= 0.05f ? 0.05f : speed;
+
         try
         {
-            await _currentRunner.RunAsync(root, speed, _currentCts.Token);
+            await _currentRunner.RunAsync(root, safeSpeed, _currentCts.Token);
         }
-        catch (OperationCanceledException)
+        catch (Exception ex)
         {
-            // Cancelación esperada
+            ConsoleService.Output($"Error inesperado: {ex.Message}");
         }
         finally
         {
@@ -88,48 +91,23 @@ public partial class DrawingAreaView : UserControl
     {
         _currentCts?.Cancel();
     }
-    private void OnModeChanged(EditorMode mode)
-    {
-        switch (mode)
-        {
-            case EditorMode.BuildNode:
-                _spawner?.EnableBuildMode();
-                break;
-            case EditorMode.RemoveNode:
-                _spawner?.EnableRemoveMode();
-                break;
-            default:
-                _spawner?.DisableAllModes();
-                break;
-        }
-    }
 
-    private bool _layoutInitialized = false;
     private void OnFirstLayout(object? sender, EventArgs e)
     {
-        if (_layoutInitialized || Bounds.Width == 0) return;
-        _layoutInitialized = true;
-
-        if (_spawner?.RootNode != null)
-        {
-            CenterOnNode(_spawner.RootNode);
-        }
-        else
-        {
-            _gridBackground?.SetOffset(0, 0);
-        }
+        LayoutUpdated -= OnFirstLayout;
+        CenterViewOnSpawnNode();
     }
 
-    public void CenterOnNode(Node node)
+    private void CenterViewOnSpawnNode()
     {
-        if (_canvasDrawingArea == null || _gridBackground == null || _spawner == null)
-            return;
+        if (_spawner?.RootNode == null) return;
 
-        var view = _spawner.GetViewForNode(node);
+        var view = _spawner.GetViewForNode(_spawner.RootNode);
         if (view == null) return;
 
         var left = Canvas.GetLeft(view);
         var top = Canvas.GetTop(view);
+
         var nodeCenter = new Point(left + view.Width / 2, top + view.Height / 2);
 
         var viewportCenter = new Point(Bounds.Width / 2, Bounds.Height / 2);
@@ -138,7 +116,7 @@ public partial class DrawingAreaView : UserControl
 
         _transform.X = newX;
         _transform.Y = newY;
-        _gridBackground.SetOffset(newX, newY);
+        _gridBackground?.SetOffset(newX, newY);
     }
 
     private void Canvas_PointerPressed(object? sender, PointerPressedEventArgs e)
@@ -170,11 +148,8 @@ public partial class DrawingAreaView : UserControl
 
     private void CanvasPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (_isPanning && e.InitialPressMouseButton == MouseButton.Middle)
-        {
-            _isPanning = false;
-            e.Pointer.Capture(null);
-            e.Handled = true;
-        }
+        _isPanning = false;
+        e.Pointer.Capture(null);
+        e.Handled = true;
     }
 }

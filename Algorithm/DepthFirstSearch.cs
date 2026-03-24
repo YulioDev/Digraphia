@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
-using Digraphia.Views;
+using Avalonia.Threading;
 using Digraphia;
+using Digraphia.Services;
+
 namespace Digraphia.Algorithms;
 
 public class DepthFirstSearch : IGraphAlgorithm<Node>
@@ -16,44 +18,7 @@ public class DepthFirstSearch : IGraphAlgorithm<Node>
     {
         Reset();
         _stack.Push(start);
-        _current = null;
     }
-
-    public bool Step()
-    {
-        if (_finished) return false;
-
-        if (_stack.Count == 0)
-        {
-            _finished = true;
-            return false;
-        }
-
-        _current = _stack.Pop();
-
-        if (_visited.Contains(_current))
-        {
-            // Si ya estaba visitado, es porque estamos retrocediendo
-            // Marcar como completado (opcional)
-            _current.State = NodeState.Completed;
-            return Step(); // continuar con el siguiente
-        }
-
-        _visited.Add(_current);
-        _current.State = NodeState.Highlight; // visitado
-
-        // Agregar hijos a la pila en orden inverso
-        for (int i = _current.Children.Count - 1; i >= 0; i--)
-        {
-            var child = _current.Children[i];
-            if (!_visited.Contains(child))
-                _stack.Push(child);
-        }
-
-        return _stack.Count > 0;
-    }
-
-    public Node? GetCurrentNode() => _current;
 
     public void Reset()
     {
@@ -61,5 +26,56 @@ public class DepthFirstSearch : IGraphAlgorithm<Node>
         _visited.Clear();
         _current = null;
         _finished = false;
+    }
+
+    // Método expuesto para que el Runner sepa dónde está el foco visual.
+    public Node? GetCurrentNode() => _current;
+
+    public bool Step()
+    {
+        if (_finished) return false;
+
+        // Si la pila está vacía, marcamos el último nodo y cerramos la ejecución.
+        if (_stack.Count == 0)
+        {
+            _finished = true;
+            if (_current != null)
+            {
+                var last = _current;
+                Dispatcher.UIThread.Post(() => last.State = NodeState.Completed);
+            }
+            return false;
+        }
+
+        var nextNode = _stack.Pop();
+
+        // Limpieza visual: El nodo que acabamos de dejar pasa a estar completado.
+        if (_current != null && _current != nextNode)
+        {
+            var prev = _current;
+            Dispatcher.UIThread.Post(() => prev.State = NodeState.Completed);
+        }
+
+        _current = nextNode;
+
+        // Si ya lo visitamos, omitimos recursivamente sin romper el ciclo del Runner.
+        if (_visited.Contains(_current))
+        {
+            ConsoleService.Output($"Omitiendo nodo ya visitado {_current.Id}");
+            return Step();
+        }
+
+        _visited.Add(_current);
+        Dispatcher.UIThread.Post(() => _current.State = NodeState.Highlight);
+
+        // Agregamos en reversa para mantener el orden de visita visual natural de izquierda a derecha.
+        for (int i = _current.Children.Count - 1; i >= 0; i--)
+        {
+            var child = _current.Children[i];
+            if (!_visited.Contains(child)) _stack.Push(child);
+        }
+
+        // Siempre retornamos true si procesamos un nodo, indicando al Runner que aplique el Delay.
+        return true;
     }
 }

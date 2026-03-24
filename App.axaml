@@ -6,7 +6,7 @@
         <StyleInclude Source="avares://Digraphia/Styles/MainStyle.axaml" />
     </Application.Styles>
     <Application.Resources>
-        <local:StateToFillBrushConverter x:Key="StateToFillBrush"/>
-        <local:StateToStrokeBrushConverter x:Key="StateToStrokeBrush"/>
-    </Application.Resources>
+    <local:StateToFillBrushConverter x:Key="StateToFillBrush"/>
+    <local:StateToStrokeBrushConverter x:Key="StateToStrokeBrush"/>
+</Application.Resources>
 </Application>
