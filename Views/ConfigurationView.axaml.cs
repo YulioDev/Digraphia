@@ -15,11 +15,11 @@ public partial class ConfigurationView : UserControl
         InitializeComponent();
 
         btnAddNode.Click += (_, _) => ToggleAddNodeMode();
-        btnRemoveNode.Click += (_, _) => MainEventManager.SetMode(EditorMode.RemoveNode);
-        
+        btnRemoveNode.Click += (_, _) => ToggleRemoveNodeMode();
+
         btnStartSearch.Click += (_, _) => OnStartSearch();
         btnStopSearch.Click += (_, _) => OnStopSearch();
-        
+
         sldSpeed.PropertyChanged += (_, e) =>
         {
             if (e.Property == RangeBase.ValueProperty)
@@ -27,35 +27,55 @@ public partial class ConfigurationView : UserControl
         };
     }
 
-    /* Cambia el estado del boton y emite el evento para que el Spawner (que deberia estar 
-       escuchando en el controlador principal) muestre u oculte los slots disponibles */
     private void ToggleAddNodeMode()
     {
-        _isAddingNodes = !_isAddingNodes;
-        
         if (_isAddingNodes)
         {
-            btnAddNode.Content = "Terminar Añadir Nodo";
-            btnAddNode.Classes.Add("UnityButtonPrimary"); // Feedback visual de que esta activo
-            MainEventManager.SetMode(EditorMode.BuildNode);
-        }
-        else
-        {
+            // Desactivar modo añadir
+            _isAddingNodes = false;
             btnAddNode.Content = "Añadir Nodo";
             btnAddNode.Classes.Remove("UnityButtonPrimary");
             MainEventManager.SetMode(EditorMode.NoAction);
         }
+        else
+        {
+            // Activar modo añadir, desactivar modo eliminar si estaba activo
+            _isAddingNodes = true;
+            btnAddNode.Content = "Terminar Añadir Nodo";
+            btnAddNode.Classes.Add("UnityButtonPrimary");
+            // Desmarcar botón de eliminar
+            btnRemoveNode.Classes.Remove("UnityButtonPrimary");
+            MainEventManager.SetMode(EditorMode.BuildNode);
+        }
+    }
+
+    private void ToggleRemoveNodeMode()
+    {
+        // Alternar modo eliminar, desactivando modo añadir si estaba activo
+        if (_isAddingNodes)
+        {
+            // Desactivar modo añadir primero
+            _isAddingNodes = false;
+            btnAddNode.Content = "Añadir Nodo";
+            btnAddNode.Classes.Remove("UnityButtonPrimary");
+        }
+        // Activar modo eliminar (no es toggle, se activa y se desactiva al salir)
+        btnRemoveNode.Classes.Add("UnityButtonPrimary");
+        MainEventManager.SetMode(EditorMode.RemoveNode);
     }
 
     private void OnStartSearch()
     {
         ConsoleService.Output("Búsqueda iniciada.");
         ConsoleService.State("Ejecutando", ConsoleState.Warning);
+        // Aquí se debería iniciar el algoritmo de búsqueda seleccionado
+        // usando la interfaz IGraphAlgorithm.
     }
 
     private void OnStopSearch()
     {
         ConsoleService.Output("Búsqueda detenida.");
         ConsoleService.State("Listo", ConsoleState.Ready);
+        // Detener el algoritmo en ejecución
     }
 }
