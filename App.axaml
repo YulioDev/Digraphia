@@ -1,9 +1,12 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="Digraphia.App"
-             RequestedThemeVariant="Default">
+             xmlns:local="clr-namespace:Digraphia.Views"
+             x:Class="Digraphia.App">
     <Application.Styles>
-        <FluentTheme />
-        <StyleInclude Source="avares://Digraphia/Styles/MainStyle.axaml"/>
+        <StyleInclude Source="avares://Digraphia/Styles/MainStyle.axaml" />
     </Application.Styles>
+    <Application.Resources>
+        <local:StateToFillBrushConverter x:Key="StateToFillBrush"/>
+        <local:StateToStrokeBrushConverter x:Key="StateToStrokeBrush"/>
+    </Application.Resources>
 </Application>

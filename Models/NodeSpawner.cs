@@ -13,17 +13,20 @@ public class NodeSpawner
 {
     private readonly Canvas _canvas;
     private readonly GridBackgroundControl _grid;
-    private readonly List<NodeView> _activeNodes = new();
+    private Tree _tree = new();
+    private readonly Dictionary<Node, NodeView> _nodeToView = new();
+
     private bool _isBuildModeActive;
     private bool _isRemoveModeActive;
 
-    public NodeView? RootNode { get; private set; }
-    public IReadOnlyList<NodeView> AllNodes => _activeNodes;
+    public Node? RootNode => _tree.Root;
+    public IReadOnlyList<Node> AllNodes => _tree.AllNodes;
 
     public NodeSpawner(Canvas canvas, GridBackgroundControl grid)
     {
         _canvas = canvas;
         _grid = grid;
+        _tree = new Tree();  // Inicialización explícita
     }
 
     public void EnableBuildMode()
@@ -56,41 +59,33 @@ public class NodeSpawner
 
         if (_isBuildModeActive)
         {
-            // Obtener celda de grilla más cercana
             var gridPos = PixelToGrid(clickPos);
-            // Redondear a coordenadas enteras para alineación
             gridPos = new Vector2((float)Math.Round(gridPos.X), (float)Math.Round(gridPos.Y));
 
-            // Verificar si ya existe un nodo en esa celda
             if (IsNodeAtPosition(gridPos))
                 return;
 
-            // Crear nuevo nodo
             var newNode = CreateNode(gridPos);
             if (newNode != null)
             {
-                // Conectar al nodo más cercano (si existe)
-                var nearest = FindNearestNode(newNode);
-                if (nearest != null)
+                var nearest = _tree.FindNearestNode(gridPos);
+                if (nearest != null && nearest != newNode)
                 {
                     nearest.Children.Add(newNode);
-                    newNode.ParentNode = nearest;
+                    newNode.Parent = nearest;
                 }
-                else if (_activeNodes.Count == 0)
+                else if (_tree.AllNodes.Count == 0)
                 {
-                    // Es el primer nodo, será la raíz
-                    RootNode = newNode;
-                    // Centrar la cámara en la raíz (lo maneja DrawingAreaView)
+                    // primer nodo, será raíz
                 }
 
-                _activeNodes.Add(newNode);
-                _grid.AddPoint(gridPos, Colors.Transparent); // punto de ocupación
+                _tree.AddNode(newNode);
+                _grid.AddPoint(gridPos, Colors.Transparent);
                 RefreshConnections();
             }
         }
         else if (_isRemoveModeActive)
         {
-            // Buscar nodo bajo el cursor
             var node = FindNodeAtPosition(clickPos);
             if (node != null)
             {
@@ -100,118 +95,79 @@ public class NodeSpawner
         }
     }
 
-    private NodeView? CreateNode(Vector2 gridPos)
+    private Node? CreateNode(Vector2 gridPos)
     {
         var pixelPos = _grid.GridToCanvas(gridPos);
-        string nodeName = ((char)('A' + _activeNodes.Count)).ToString();
-        var node = new NodeView(nodeName, false);
+        string nodeId = ((char)('A' + _tree.AllNodes.Count)).ToString();
+        var node = new Node(nodeId, gridPos);
 
-        Canvas.SetLeft(node, pixelPos.X - node.Width / 2);
-        Canvas.SetTop(node, pixelPos.Y - node.Height / 2);
+        // Crear vista y enlazar
+        var view = new NodeView
+        {
+            DataContext = node,
+            Width = 40,
+            Height = 40
+        };
+        Canvas.SetLeft(view, pixelPos.X - view.Width / 2);
+        Canvas.SetTop(view, pixelPos.Y - view.Height / 2);
+        _canvas.Children.Add(view);
 
-        _canvas.Children.Add(node);
+        _nodeToView[node] = view;
         return node;
     }
 
     private bool IsNodeAtPosition(Vector2 gridPos)
     {
-        return _activeNodes.Any(node =>
-        {
-            var left = Canvas.GetLeft(node);
-            var top = Canvas.GetTop(node);
-            var center = new Avalonia.Point(left + node.Width / 2, top + node.Height / 2);
-            var nodeGrid = PixelToGrid(center);
-            return Math.Abs(nodeGrid.X - gridPos.X) < 0.1f && Math.Abs(nodeGrid.Y - gridPos.Y) < 0.1f;
-        });
+        // Asegurar que ningún nodo tenga posición nula
+        return _tree.AllNodes.Any(n => n.GridPosition.DistanceTo(gridPos) < 0.1f);
     }
 
-    private NodeView? FindNodeAtPosition(Avalonia.Point clickPos)
+    private Node? FindNodeAtPosition(Avalonia.Point clickPos)
     {
-        return _activeNodes.FirstOrDefault(node =>
+        // Buscar primero por colisión en la vista
+        var view = _canvas.Children.OfType<NodeView>().FirstOrDefault(v =>
         {
-            var left = Canvas.GetLeft(node);
-            var top = Canvas.GetTop(node);
-            var rect = new Rect(left, top, node.Width, node.Height);
+            var left = Canvas.GetLeft(v);
+            var top = Canvas.GetTop(v);
+            var rect = new Rect(left, top, v.Width, v.Height);
             return rect.Contains(clickPos);
         });
+        if (view != null)
+            return view.DataContext as Node;
+        return null;
     }
-
-    private NodeView? FindNearestNode(NodeView newNode)
+    // Agregar dentro de la clase NodeSpawner:
+    public NodeView? GetViewForNode(Node node)
     {
-        if (_activeNodes.Count == 0)
-            return null;
-
-        var newNodePos = GetNodeGridPosition(newNode);
-        NodeView? nearest = null;
-        double minDist = double.MaxValue;
-
-        foreach (var node in _activeNodes)
+        return _nodeToView.TryGetValue(node, out var view) ? view : null;
+    }
+    private void RemoveNode(Node node)
+    {
+        _tree.RemoveNode(node);
+        if (_nodeToView.TryGetValue(node, out var view))
         {
-            var nodePos = GetNodeGridPosition(node);
-            double dx = newNodePos.X - nodePos.X;
-            double dy = newNodePos.Y - nodePos.Y;
-            double dist = Math.Sqrt(dx * dx + dy * dy);
-            if (dist < minDist)
-            {
-                minDist = dist;
-                nearest = node;
-            }
+            _canvas.Children.Remove(view);
+            _nodeToView.Remove(node);
         }
-        return nearest;
-    }
-
-    private Vector2 GetNodeGridPosition(NodeView node)
-    {
-        var left = Canvas.GetLeft(node);
-        var top = Canvas.GetTop(node);
-        var center = new Avalonia.Point(left + node.Width / 2, top + node.Height / 2);
-        return PixelToGrid(center);
-    }
-
-    private void RemoveNode(NodeView node)
-    {
-        // Eliminar referencias en el padre
-        if (node.ParentNode != null)
-            node.ParentNode.Children.Remove(node);
-
-        // Eliminar referencias en los hijos (ellos pierden padre)
-        foreach (var child in node.Children.ToList())
-        {
-            child.ParentNode = null;
-            // Opcional: eliminar también los hijos (decidir si se eliminan en cascada)
-            // Aquí simplemente se desconectan
-        }
-        node.Children.Clear();
-
-        // Remover del canvas y de la lista activa
-        _canvas.Children.Remove(node);
-        _activeNodes.Remove(node);
-
-        // Si era la raíz, reasignar raíz si queda algún nodo
-        if (node == RootNode)
-            RootNode = _activeNodes.FirstOrDefault();
-
-        // Limpiar punto de ocupación en la grilla (opcional)
-        var gridPos = GetNodeGridPosition(node);
-        // _grid.RemovePoint(gridPos);  // si se implementa RemovePoint en GridBackgroundControl
     }
 
     private void RefreshConnections()
     {
-        // Eliminar todas las líneas y flechas existentes en el canvas
         var toRemove = new List<Control>();
         toRemove.AddRange(_canvas.Children.OfType<Line>());
         toRemove.AddRange(_canvas.Children.OfType<Polygon>());
-
         foreach (var element in toRemove)
             _canvas.Children.Remove(element);
 
-        // Redibujar todas las conexiones
-        foreach (var node in _activeNodes)
+        foreach (var node in _tree.AllNodes)
         {
             foreach (var child in node.Children)
             {
-                ConnectionBuilder.DrawDirectedConnection(_canvas, node, child);
+                if (_nodeToView.TryGetValue(node, out var parentView) &&
+                    _nodeToView.TryGetValue(child, out var childView))
+                {
+                    ConnectionBuilder.DrawDirectedConnection(_canvas, parentView, childView);
+                }
             }
         }
     }

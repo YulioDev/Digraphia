@@ -1,35 +1,10 @@
-﻿using Digraphia.Views;
+﻿namespace Digraphia.Algorithms;
 
-namespace Digraphia.Algorithms;
-
-/// <summary>
-/// Interfaz general para algoritmos de recorrido de grafos.
-/// </summary>
-public interface IGraphAlgorithm
+public interface IGraphAlgorithm<T>
 {
-    /// <summary>
-    /// Inicializa el algoritmo desde un nodo de inicio.
-    /// </summary>
-    void Initialize(NodeView start);
-
-    /// <summary>
-    /// Avanza un paso en el recorrido.
-    /// </summary>
-    /// <returns>True si aún hay pasos pendientes, False si terminó.</returns>
+    void Initialize(T start);
     bool Step();
-
-    /// <summary>
-    /// Indica si el recorrido ha finalizado.
-    /// </summary>
     bool IsFinished { get; }
-
-    /// <summary>
-    /// Obtiene el nodo actualmente visitado.
-    /// </summary>
-    NodeView? GetCurrentNode();
-
-    /// <summary>
-    /// Restablece el estado del algoritmo para poder ejecutarlo nuevamente.
-    /// </summary>
+    T? GetCurrentNode();
     void Reset();
 }

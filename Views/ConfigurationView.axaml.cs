@@ -64,18 +64,15 @@ public partial class ConfigurationView : UserControl
         MainEventManager.SetMode(EditorMode.RemoveNode);
     }
 
+    // En OnStartSearch() y OnStopSearch():
     private void OnStartSearch()
     {
-        ConsoleService.Output("Búsqueda iniciada.");
-        ConsoleService.State("Ejecutando", ConsoleState.Warning);
-        // Aquí se debería iniciar el algoritmo de búsqueda seleccionado
-        // usando la interfaz IGraphAlgorithm.
+        float speed = (float)sldSpeed.Value;
+        MainEventManager.StartSearch(speed);
     }
 
     private void OnStopSearch()
     {
-        ConsoleService.Output("Búsqueda detenida.");
-        ConsoleService.State("Listo", ConsoleState.Ready);
-        // Detener el algoritmo en ejecución
+        MainEventManager.StopSearch();
     }
 }

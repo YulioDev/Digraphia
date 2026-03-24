@@ -1,18 +1,18 @@
 ﻿using System.Collections.Generic;
 using Digraphia.Views;
-
+using Digraphia;
 namespace Digraphia.Algorithms;
 
-public class DepthFirstSearch : IGraphAlgorithm
+public class DepthFirstSearch : IGraphAlgorithm<Node>
 {
-    private readonly Stack<NodeView> _stack = new();
-    private readonly HashSet<NodeView> _visited = new();
-    private NodeView? _current;
+    private readonly Stack<Node> _stack = new();
+    private readonly HashSet<Node> _visited = new();
+    private Node? _current;
     private bool _finished;
 
     public bool IsFinished => _finished;
 
-    public void Initialize(NodeView start)
+    public void Initialize(Node start)
     {
         Reset();
         _stack.Push(start);
@@ -21,8 +21,7 @@ public class DepthFirstSearch : IGraphAlgorithm
 
     public bool Step()
     {
-        if (_finished)
-            return false;
+        if (_finished) return false;
 
         if (_stack.Count == 0)
         {
@@ -34,13 +33,16 @@ public class DepthFirstSearch : IGraphAlgorithm
 
         if (_visited.Contains(_current))
         {
-            // Si ya estaba visitado, continuar con el siguiente paso
-            return Step();
+            // Si ya estaba visitado, es porque estamos retrocediendo
+            // Marcar como completado (opcional)
+            _current.State = NodeState.Completed;
+            return Step(); // continuar con el siguiente
         }
 
         _visited.Add(_current);
+        _current.State = NodeState.Highlight; // visitado
 
-        // Empujar hijos en orden inverso para mantener el orden de exploración
+        // Agregar hijos a la pila en orden inverso
         for (int i = _current.Children.Count - 1; i >= 0; i--)
         {
             var child = _current.Children[i];
@@ -51,7 +53,7 @@ public class DepthFirstSearch : IGraphAlgorithm
         return _stack.Count > 0;
     }
 
-    public NodeView? GetCurrentNode() => _current;
+    public Node? GetCurrentNode() => _current;
 
     public void Reset()
     {

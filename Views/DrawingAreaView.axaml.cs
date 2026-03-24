@@ -1,10 +1,12 @@
-using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
-using Avalonia.Threading;
+using Digraphia.Algorithms;
 using Digraphia.EventManager;
+using Digraphia.Services;
+using System;
+using System.Threading;
 
 namespace Digraphia.Views;
 
@@ -16,7 +18,8 @@ public partial class DrawingAreaView : UserControl
     private GridBackgroundControl? _gridBackground;
     private TranslateTransform _transform = new();
     private NodeSpawner? _spawner;
-
+    private GraphRunner? _currentRunner;
+    private CancellationTokenSource? _currentCts;
     public DrawingAreaView()
     {
         InitializeComponent();
@@ -35,14 +38,56 @@ public partial class DrawingAreaView : UserControl
         PointerCaptureLost += (_, _) => _isPanning = false;
         LayoutUpdated += OnFirstLayout;
 
-        // Reacciona al modo global
-        MainEventManager.ModeChanged += OnModeChanged;
+        MainEventManager.SearchStarted += OnSearchStarted;
+        MainEventManager.SearchStopped += OnSearchStopped;
 
-        // Centrar cámara cuando se cree el primer nodo (lo hacemos en el evento de cambio de nodos)
-        // Para esto, necesitamos que NodeSpawner notifique cuando se agregue el primer nodo
-        // Alternativa: observar el spawner después de que se cree la raíz
+        MainEventManager.ModeChanged += OnModeChanged;
     }
 
+    private async void OnSearchStarted(float speed)
+    {
+        if (_spawner == null) return;
+
+        // Detener búsqueda anterior si existe
+        OnSearchStopped();
+
+        var root = _spawner.RootNode;
+        if (root == null)
+        {
+            ConsoleService.Output("No hay nodos en el grafo para iniciar búsqueda.");
+            return;
+        }
+
+        // Resetear colores de todos los nodos
+        foreach (var node in _spawner.AllNodes)
+        {
+            node.State = NodeState.Normal;
+        }
+
+        var algorithm = new DepthFirstSearch();
+        _currentRunner = new GraphRunner(algorithm);
+        _currentCts = new CancellationTokenSource();
+
+        try
+        {
+            await _currentRunner.RunAsync(root, speed, _currentCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Cancelación esperada
+        }
+        finally
+        {
+            _currentRunner = null;
+            _currentCts?.Dispose();
+            _currentCts = null;
+        }
+    }
+
+    private void OnSearchStopped()
+    {
+        _currentCts?.Cancel();
+    }
     private void OnModeChanged(EditorMode mode)
     {
         switch (mode)
@@ -65,7 +110,6 @@ public partial class DrawingAreaView : UserControl
         if (_layoutInitialized || Bounds.Width == 0) return;
         _layoutInitialized = true;
 
-        // Centrar la vista en el nodo raíz si existe
         if (_spawner?.RootNode != null)
         {
             CenterOnNode(_spawner.RootNode);
@@ -76,15 +120,18 @@ public partial class DrawingAreaView : UserControl
         }
     }
 
-    public void CenterOnNode(NodeView node)
+    public void CenterOnNode(Node node)
     {
-        if (_canvasDrawingArea == null || _gridBackground == null) return;
+        if (_canvasDrawingArea == null || _gridBackground == null || _spawner == null)
+            return;
 
-        var left = Canvas.GetLeft(node);
-        var top = Canvas.GetTop(node);
-        var nodeCenter = new Point(left + node.Width / 2, top + node.Height / 2);
+        var view = _spawner.GetViewForNode(node);
+        if (view == null) return;
 
-        // Calcular offset para centrar el nodo en el viewport
+        var left = Canvas.GetLeft(view);
+        var top = Canvas.GetTop(view);
+        var nodeCenter = new Point(left + view.Width / 2, top + view.Height / 2);
+
         var viewportCenter = new Point(Bounds.Width / 2, Bounds.Height / 2);
         var newX = viewportCenter.X - nodeCenter.X;
         var newY = viewportCenter.Y - nodeCenter.Y;
